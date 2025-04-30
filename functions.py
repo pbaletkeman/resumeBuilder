@@ -2,8 +2,9 @@
 import requests
 
 from markdown import markdown
-# from weasyprint import HTML
 
+model = "gemma-3-4b-it-qat"
+temperature = 0.7
 
 def create_prompt(resume_string: str, jd_string: str) -> str:
     """
@@ -97,13 +98,10 @@ def get_resume_response(prompt: str, temperature: float = 0.7) -> str:
 
     # Make API call
 
-    response = requests.post("http://localhost:1234/api/v0/chat/completions", json={
-        "messages": [
-            {"role": "system", "content": "Expert resume writer"},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": temperature
-    })
+    messages =  [{"role": "system", "content": "Expert resume writer"},{"role": "user", "content": prompt}]
+    data = {"model":model, "messages":messages,"temperature":temperature}
+
+    response = requests.post("http://localhost:1234/api/v0/chat/completions", json=data)
 
 
     # Extract and return response
@@ -132,7 +130,7 @@ def process_resume(resume, jd_string):
     prompt = create_prompt(resume_string, jd_string)
 
     # generate response
-    response_string = get_resume_response(prompt, my_sk)
+    response_string = get_resume_response(prompt, temperature=temperature)
     response_list = response_string.split("## Additional Suggestions")
 
     # extract new resume and suggestions for improvement
