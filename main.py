@@ -33,18 +33,18 @@ def get_resume() -> str:
 
 
 def create_prompt_template(resume_string: str, jd_string: str):
-    today = (datetime.datetime(2025, 6, 1)
+    today = (datetime.datetime.now()
     .strftime("%A, %B %d, %Y")
-    .replace("01,", "1,")
-    .replace("02,", "2,")
+    .replace("01,","1,")
+    .replace("02,","2,")
     .replace("03,","3,")
-    .replace("04,", "4,")
-    .replace("04,", "4,")
-    .replace("05,", "5,")
-    .replace("06,", "6,")
-    .replace("07,", "7,")
+    .replace("04,","4,")
+    .replace("04,","4,")
+    .replace("05,","5,")
+    .replace("06,","6,")
+    .replace("07,","7,")
     .replace("08,","8,")
-    .replace("09,", "9,"))
+    .replace("09,","9,"))
 
     return f"""
 You are a professional resume optimization expert specializing in tailoring resumes to specific job descriptions. Your goal is to optimize my resume and provide actionable suggestions for improvement to align with the target role.
@@ -74,7 +74,7 @@ You are a professional resume optimization expert specializing in tailoring resu
     - Include a **"Cover Letter"** section at the end with cover letter for the job description.
         - The cover letter should be concise and highlight my key skills and experience, tailored the job description
         - Include Pete Letkeman as the name
-        
+
 ---
 
 ### Input:
