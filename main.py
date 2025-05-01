@@ -2,132 +2,130 @@
 import os
 
 import requests
-import re
 import datetime
-
 
 from markdown import Markdown
 
-model = "gemma-3-4b-it-qat"
-temperature = 0.7
+class ResumeBuilder:
+    # model = "gemma-3-4b-it-qat"
 
-def get_job_description() -> list[str]:
-    job_descriptions = []
+    endpoint = "http://localhost:1234/api/v0/chat/completions"
+    model = "codestral @ iq2_m"
+    temperature = 0.7
+    encoding = "utf-8"
 
-    for x in os.listdir("job-descriptions"):
-        if x.endswith(".txt"):
-            # Prints only text file present in My Folder
-            print(x)
-            with open("job-descriptions" + os.sep + x, "r", encoding="utf-8") as content:
-                jd = ".".join(content.readlines())
-                company = x.split("-")[0]
-                title = x.split("-")[1].replace(".txt","")
-                job_descriptions.append({"jd":jd, "company": company, "title":title})
+    name = "Pete Letkeman"
+    address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405\n"
+    email = "pete@letkeman"
 
-    return job_descriptions
+    def get_job_description(self) -> list[str]:
+        job_descriptions = []
 
-def get_resume() -> str:
-    # Open and read the Markdown file
-    with open("resume/resume.md", "r", encoding="utf-8") as file:
-        return file.read()
+        for x in os.listdir("job-descriptions"):
+            if x.endswith(".txt"):
+                # Prints only text file present in My Folder
+                with open("job-descriptions" + os.sep + x, "r", encoding=self.encoding) as content:
+                    jd = ".".join(content.readlines())
+                    company = x.split("-")[0]
+                    title = x.split("-")[1].replace(".txt","")
+                    job_descriptions.append({"jd":jd, "company": company, "title":title})
 
+        return job_descriptions
 
-def create_prompt_template(resume_string: str, jd_string: str):
-    today = (datetime.datetime.now()
-    .strftime("%A, %B %d, %Y")
-    .replace("01,","1,")
-    .replace("02,","2,")
-    .replace("03,","3,")
-    .replace("04,","4,")
-    .replace("04,","4,")
-    .replace("05,","5,")
-    .replace("06,","6,")
-    .replace("07,","7,")
-    .replace("08,","8,")
-    .replace("09,","9,"))
+    def get_resume(self) -> str:
+        # Open and read the Markdown file
+        with open("resume/resume.md", "r", encoding=self.encoding) as file:
+            return file.read()
 
-    return f"""
-You are a professional resume optimization expert specializing in tailoring resumes to specific job descriptions. Your goal is to optimize my resume and provide actionable suggestions for improvement to align with the target role.
+    def create_prompt_template(self,resume_string: str, jd_string: str):
+        today = (datetime.datetime.now()
+        .strftime("%A, %B %d, %Y")
+        .replace("01,","1,")
+        .replace("02,","2,")
+        .replace("03,","3,")
+        .replace("04,","4,")
+        .replace("04,","4,")
+        .replace("05,","5,")
+        .replace("06,","6,")
+        .replace("07,","7,")
+        .replace("08,","8,")
+        .replace("09,","9,"))
 
-### Guidelines:
-1. **Relevance**:
-    - Prioritize experiences, skills, and achievements **most relevant to the job description**.
-    - Remove or de-emphasize irrelevant details to ensure a **concise** and **targeted** resume.
-    - Limit work experience section to 2-3 most relevant roles
-    - Limit bullet points under each role to 2-3 most relevant impacts
+        # name = "Pete Letkeman"
+        # address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405\n"
+        # email = "pete@letkeman"
 
-2. **Action-Driven Results**:
-    - Use **strong action verbs** and **quantifiable results** (e.g., percentages, revenue, efficiency improvements) to highlight impact.
-
-3. **Keyword Optimization**:
-    - Integrate **keywords** and phrases from the job description naturally to optimize for ATS (Applicant Tracking Systems).
-
-4. **Additional Suggestions** *(If Gaps Exist)*:
-    - If the resume does not fully align with the job description, suggest:
-        1. **Additional technical or soft skills** that I could add to make my profile stronger.
-        2. **Certifications or courses** I could pursue to bridge the gap.
-        3. **Project ideas or experiences** that would better align with the role.
-
-5. **Formatting**:
-    - Output the tailored resume in **clean Markdown format**.
-    - Include an **"Additional Suggestions"** section next with actionable improvement recommendations.
-    - Include a **"Cover Letter"** section at the end with cover letter for the job description.
-        - The cover letter should be concise and highlight my key skills and experience, tailored the job description
-        - Include Pete Letkeman as the name
-
----
-
-### Input:
-- **My resume**:
-{resume_string}
-
-- **The job description**:
-{jd_string}
-
----
-
-### Output:
-1. **Tailored Resume**:
-    - A resume in **Markdown format** that emphasizes relevant experience, skills, and achievements.
-    - Incorporates job description **keywords** to optimize for ATS.
-    - Uses strong language and is no longer than **one page**.
-
-2. **Additional Suggestions** *(if applicable)*:
-    - List **skills** that could strengthen alignment with the role.
-    - Recommend **certifications or courses** to pursue.
-    - Suggest **specific projects or experiences** to develop.
-
-3. **Cover Letter**
-    - A cover letter in **Markdown format** tailored to the {jd_string} and company.
-"""
-
-# Make API call
-jds = get_job_description()[0]
-prompt = create_prompt_template(get_resume(), jds["jd"])
-messages = [{"role": "system", "content": "Expert resume writer"}, {"role": "user", "content": prompt}]
-data = {"model": model, "messages": messages, "temperature": temperature}
-
-response = requests.post("http://localhost:1234/api/v0/chat/completions", json=data)
+        with open("prompts/prompt.md", "r", encoding=self.encoding) as file:
+            retval = file.read()
+        retval = retval.replace("{jd_string}", jd_string)
+        retval = retval.replace("{resume_string}", resume_string)
+        retval = retval.replace("{today}", today)
+        retval = retval.replace("{address}", self.address)
+        retval = retval.replace("{name}", self.name)
+        retval = retval.replace("{email}", self.email)
+        return retval
 
 
-# Extract the tailored resume and additional suggestions from the response
-try:
-    body = response.json()['choices'][0]['message']['content']
-    tailored_resume = body.split("Additional Suggestions")[0].strip()
-    cover_letter = body.split("Cover Letter")[1].strip()
-    additional_suggestions = body.split("Additional Suggestions")[1].strip()
-    additional_suggestions = additional_suggestions.replace(cover_letter,"")
-    tailored_resume = tailored_resume.replace("*  ","- ").replace("*   ","- ").replace("-  ","- ")
-    print("tailored_resume")
-    print(tailored_resume)
-    print("-" * 20)
-    print("cover letter")
-    print(cover_letter)
-    print("-" * 20)
-    print("additional_suggestions")
-    print(additional_suggestions)
-    # print("-" * 20)
-    # print(response.json())
+    def process_prompt(self):
+        # this fails for long job descriptions if a cover letter is also prompted
+        jobs = self.get_job_description()
+        if len(jobs) > 0:
+            return_listing = []
+            for jds in jobs:
+                prompt = self.create_prompt_template(self.get_resume(), jds["jd"])
+                messages = [{"role": "system", "content": "Expert resume writer"}, {"role": "user", "content": prompt}]
+                data = {"model": self.model, "messages": messages, "temperature": self.temperature}
 
-except Exception as ex:
-    print(str(ex))
+                # Make API call
+                response = requests.post(self.endpoint, json=data)
+
+                # Extract the tailored resume and additional suggestions from the response
+                try:
+                    response_body = response.json()
+                    if ('choices' in response_body) and (len(response_body['choices'] > 0)):
+                        body = response_body['choices'][0]['message']['content']
+                        resume = body.split("Additional Suggestions")[0].strip()
+                        cover = body.split("Cover Letter")[1].strip()
+                        suggestions = body.split("Additional Suggestions")[1].strip()
+                        suggestions = suggestions.replace(cover,"")
+                        resume = resume.replace("*  ","- ").replace("*   ","- ").replace("-  ","- ")
+                        return_listing.append({"cover":cover, "resume":resume, "suggestions":suggestions})
+                except Exception as ex:
+                    print(str(ex))
+
+            return return_listing
+        else:
+            return None
+
+    def export_resume(self,new_resume):
+        """
+        Convert a markdown resume to PDF format and save it.
+
+        Args:
+            new_resume (str): The resume content in markdown format
+
+        Returns:
+            str: A message indicating success or failure of the PDF export
+        """
+
+        return new_resume
+        #
+        # try:
+        #     # save as PDF
+        #     output_pdf_file = "resumes/resume_new.pdf"
+        #
+        #     # Convert Markdown to HTML
+        #     html_content = markdown(new_resume)
+        #
+        #     # Convert HTML to PDF and save
+        #     HTML(string=html_content).write_pdf(output_pdf_file, stylesheets=['resumes/style.css'])
+        #
+        #     return f"Successfully exported resume to {output_pdf_file} 🎉"
+        # except Exception as e:
+        #     return f"Failed to export resume: {str(e)} 💔"
+
+
+r = ResumeBuilder()
+
+items = r.process_prompt()
+print(items)
