@@ -3,6 +3,12 @@
 ### Inspiration/original: 
 https://github.com/ShawhinT/AI-Builders-Bootcamp-2/tree/main/lightning-lesson
 
+This project generates cover letters and resumes that optimized for the supplied job descriptions.
+
+Custom dynamic prompts are created and sent to an OpenAI compatiable service (completions endpoint).
+
+LM Studio from https://lmstudio.ai/ is a great free resource, which is used in this project as well.
+
 ## Setup
 ### How to:
 1. Install https://lmstudio.ai/ - LM Studio 0.3.15 (Build 11) or newer
