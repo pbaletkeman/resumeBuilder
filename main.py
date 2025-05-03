@@ -3,20 +3,22 @@ import os
 
 import requests
 import datetime
+import argparse
 
-from markdown import Markdown
+
+from markdown_pdf import MarkdownPdf, Section
 
 class ResumeBuilder:
-    model = "gemma-3-4b-it-qat"
-
-    endpoint = "http://localhost:1234/api/v0/chat/completions"
-    # model = "codestral @ iq2_m"
-    temperature = 0.7
-    encoding = "utf-8"
-
     name = "Pete Letkeman"
     address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405"
     email = "pete@letkeman"
+
+    model = "gemma-3-4b-it-qat"
+
+    endpoint = "http://localhost:1234/api/v0/chat/completions"
+    temperature = 0.09
+
+    encoding = "utf-8"
 
     path = "output"
 
@@ -24,7 +26,6 @@ class ResumeBuilder:
         os.makedirs(path)
 
     current_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
-
 
     def get_job_description(self) -> list[str]:
         job_descriptions = []
@@ -100,9 +101,14 @@ class ResumeBuilder:
                             suggestions = body.split("Additional Suggestions")[1].strip()
                             if "```" in resume:
                                 start = resume.find("```")
-                                resume = resume[start:]
+                                if start > 0:
+                                    resume = resume[start:]
+                                resume = resume.replace("```markdown","")
                             while resume.endswith("#"):
                                 resume = resume[0:-1]
+                            while resume.endswith("*"):
+                                resume = resume[0:-1]
+                            resume = resume.replace("`","")
                             resume = resume.replace("---","").strip()
                             return_listing.append({"resume":resume, "suggestions":suggestions, "company": jds["company"], "title":jds["title"]})
                         else:
@@ -121,7 +127,9 @@ class ResumeBuilder:
         for cl in cover_letters:
             x = cl["cover"].split("---")
             try:
-                with open(self.path + os.sep + "cover-" + cl["company"] + "-" + cl["title"] + "-" + self.current_date_time + ".txt", "w+t",
+                if not os.path.exists(self.path + os.sep + cl["company"] ):
+                    os.makedirs(self.path + os.sep + cl["company"])
+                with open(self.path + os.sep + cl["company"] + os.sep + "cover-" + cl["title"] + "-" + self.current_date_time + ".txt", "w+t",
                           encoding=self.encoding) as file:
                     print("writing - " + file.name)
                     file.write(x[0])
@@ -130,39 +138,50 @@ class ResumeBuilder:
 
     def export_resume(self):
         resumes = self.process_prompt(is_cover=False)
-        for r in resumes:
-            print(r)
-            print("#" * 15)
-            print(r["resume"])
-            # print("@" * 15)
-            # print(r["suggestions"])
+        for res in resumes:
+            try:
+                if not os.path.exists(self.path + os.sep + res["company"]):
+                    os.makedirs(self.path + os.sep + res["company"])
+                with open(self.path + os.sep + res["company"] + os.sep + "resume-" + res["title"] + "-" + self.current_date_time + ".md", "w+t",
+                          encoding=self.encoding) as file:
+                    print("writing - " + file.name)
+                    file.write(res["resume"])
+                    self.save_pdf(file.name,res["resume"])
+                with open(self.path + os.sep + res["company"] + os.sep + "suggestion-" + res["title"] + "-" + self.current_date_time + ".md", "w+t",
+                          encoding=self.encoding) as file:
+                    print("writing - " + file.name)
+                    file.write(res["suggestions"])
+            except Exception as ex:
+                print(str(ex))
 
-        """
-        Convert a markdown resume to PDF format and save it.
+    @staticmethod
+    def save_pdf(file_name: str, file_contents:str):
 
-        Args:
-            new_resume (str): The resume content in markdown format
+        pdf = MarkdownPdf(toc_level=2, optimize=True)
 
-        Returns:
-            str: A message indicating success or failure of the PDF export
-        """
+        css = "p {border: 2px solid white; } li {border: 2px solid white; margin: 2px}"
+        pdf.add_section(Section(file_contents), user_css=css)
 
-        # return new_resume
-        #
-        # try:
-        #     # save as PDF
-        #     output_pdf_file = "resumes/resume_new.pdf"
-        #
-        #     # Convert Markdown to HTML
-        #     html_content = markdown(new_resume)
-        #
-        #     # Convert HTML to PDF and save
-        #     HTML(string=html_content).write_pdf(output_pdf_file, stylesheets=['resumes/style.css'])
-        #
-        #     return f"Successfully exported resume to {output_pdf_file} 🎉"
-        # except Exception as e:
-        #     return f"Failed to export resume: {str(e)} 💔"
+        print("writing - " + file_name.replace(".md",".pdf"))
+        pdf.save(file_name.replace(".md",".pdf"))
 
-r = ResumeBuilder()
-r.export_resume()
+    def md_to_pdf(self, md_file:str):
+        with open(md_file, "r", encoding=self.encoding) as file:
+            retval = file.read()
+        self.save_pdf(md_file,retval)
+
+if __name__ == '__main__':
+    # python main.py --filepath="output\Systems & Software\resume-Senior Software Engineer-2025-05-03-10-52.md"
+    parser = argparse.ArgumentParser(description="resume optimizer")
+    parser.add_argument("-o", "--filepath", help="source md file")
+    args = parser.parse_args()
+    if args.filepath is not None:
+        r = ResumeBuilder()
+        r.md_to_pdf(args.filepath)
+        print("check out `output` directory")
+    else:
+        r = ResumeBuilder()
+        r.export_resume()
+        r.make_cover_letters()
+        print("check out `output` directory")
 

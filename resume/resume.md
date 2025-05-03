@@ -1,7 +1,7 @@
 # Peter Letkeman
 
 ## Certified Python & Java Spring Developer
-pete@letkeman.ca | 519-331-1405| Toronto, ON
+pete@letkeman.ca | 519-331-1405 | Toronto, ON
 
 [https://linkedin.com/in/pete-letkeman-264592a](linkedin.com/in/pete-letkeman-264592a)
 
