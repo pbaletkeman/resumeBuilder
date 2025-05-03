@@ -7,16 +7,24 @@ import datetime
 from markdown import Markdown
 
 class ResumeBuilder:
-    # model = "gemma-3-4b-it-qat"
+    model = "gemma-3-4b-it-qat"
 
     endpoint = "http://localhost:1234/api/v0/chat/completions"
-    model = "codestral @ iq2_m"
+    # model = "codestral @ iq2_m"
     temperature = 0.7
     encoding = "utf-8"
 
     name = "Pete Letkeman"
-    address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405\n"
+    address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405"
     email = "pete@letkeman"
+
+    path = "output"
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    current_date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+
 
     def get_job_description(self) -> list[str]:
         job_descriptions = []
@@ -37,7 +45,7 @@ class ResumeBuilder:
         with open("resume/resume.md", "r", encoding=self.encoding) as file:
             return file.read()
 
-    def create_prompt_template(self,resume_string: str, jd_string: str):
+    def create_prompt_template(self,resume_string: str, jd_string: str, is_cover: bool):
         today = (datetime.datetime.now()
         .strftime("%A, %B %d, %Y")
         .replace("01,","1,")
@@ -51,12 +59,14 @@ class ResumeBuilder:
         .replace("08,","8,")
         .replace("09,","9,"))
 
-        # name = "Pete Letkeman"
-        # address = "803-1100 King St W\nToronto, ON\nCanada\nM6K 0C6\n519.331.1405\n"
-        # email = "pete@letkeman"
+        retval = ""
+        if not is_cover:
+            with open("prompts/resume-prompt.md", "r", encoding=self.encoding) as file:
+                retval = file.read()
+        else:
+            with open("prompts/cover-prompt.md", "r", encoding=self.encoding) as file:
+                retval = file.read()
 
-        with open("prompts/prompt.md", "r", encoding=self.encoding) as file:
-            retval = file.read()
         retval = retval.replace("{jd_string}", jd_string)
         retval = retval.replace("{resume_string}", resume_string)
         retval = retval.replace("{today}", today)
@@ -66,36 +76,51 @@ class ResumeBuilder:
         return retval
 
 
-    def process_prompt(self):
+    def process_prompt(self, is_cover: bool):
         # this fails for long job descriptions if a cover letter is also prompted
         jobs = self.get_job_description()
         if len(jobs) > 0:
             return_listing = []
             for jds in jobs:
-                prompt = self.create_prompt_template(self.get_resume(), jds["jd"])
+                print("processing - [" + jds["company"] + " - " + jds["title"] +"]" )
+                prompt = self.create_prompt_template(self.get_resume(), jds["jd"], is_cover)
                 messages = [{"role": "system", "content": "Expert resume writer"}, {"role": "user", "content": prompt}]
                 data = {"model": self.model, "messages": messages, "temperature": self.temperature}
 
                 # Make API call
                 response = requests.post(self.endpoint, json=data)
 
-                # Extract the tailored resume and additional suggestions from the response
                 try:
                     response_body = response.json()
-                    if ('choices' in response_body) and (len(response_body['choices'] > 0)):
+                    if 'choices' in response_body:
                         body = response_body['choices'][0]['message']['content']
-                        resume = body.split("Additional Suggestions")[0].strip()
-                        cover = body.split("Cover Letter")[1].strip()
-                        suggestions = body.split("Additional Suggestions")[1].strip()
-                        suggestions = suggestions.replace(cover,"")
-                        resume = resume.replace("*  ","- ").replace("*   ","- ").replace("-  ","- ")
-                        return_listing.append({"cover":cover, "resume":resume, "suggestions":suggestions})
+                        if not is_cover:
+                            # get resume and suggestions from response
+                            resume = body.split("Additional Suggestions")[0].strip()
+                            suggestions = body.split("Additional Suggestions")[1].strip()
+                            resume = resume.replace("*  ","- ").replace("*   ","- ").replace("-  ","- ")
+                            return_listing.append({"resume":resume, "suggestions":suggestions, "company": jds["company"], "title":jds["title"]})
+                        else:
+                            # get cover letter from response
+                            return_listing.append({"cover":body, "company": jds["company"], "title":jds["title"]})
                 except Exception as ex:
                     print(str(ex))
 
             return return_listing
         else:
             return None
+
+    def make_cover_letters(self):
+        cover_letters = self.process_prompt(is_cover=True)
+        for cl in cover_letters:
+            x = cl["cover"].split("---")
+            try:
+                with open(self.path + os.sep + cl["company"] + "-" + cl["title"] + "-" + self.current_date_time + ".txt", "w+t",
+                          encoding=self.encoding) as file:
+                    print("writing - " + file.name)
+                    file.write(x[0])
+            except Exception as ex:
+                print(str(ex))
 
     def export_resume(self,new_resume):
         """
@@ -124,8 +149,6 @@ class ResumeBuilder:
         # except Exception as e:
         #     return f"Failed to export resume: {str(e)} 💔"
 
-
 r = ResumeBuilder()
+r.make_cover_letters()
 
-items = r.process_prompt()
-print(items)

@@ -22,11 +22,6 @@ You are a professional resume optimization expert specializing in tailoring resu
 5. **Formatting**:
     - Output the tailored resume in **clean Markdown format**.
     - Include an **"Additional Suggestions"** section next with actionable improvement recommendations.
-    - Include a **"Cover Letter"** section at the end with cover letter for the job description.
-        - The cover letter should be concise and highlight my key skills and experience, tailored the job description
-        - Include {name} as the name
-        - Include {address}{email} as the address
-
 ---
 
 ### Input:
