@@ -82,7 +82,6 @@ class ResumeBuilder:
         if len(jobs) > 0:
             return_listing = []
             for jds in jobs:
-                print("processing - [" + jds["company"] + " - " + jds["title"] +"]" )
                 prompt = self.create_prompt_template(self.get_resume(), jds["jd"], is_cover)
                 messages = [{"role": "system", "content": "Expert resume writer"}, {"role": "user", "content": prompt}]
                 data = {"model": self.model, "messages": messages, "temperature": self.temperature}
@@ -95,13 +94,20 @@ class ResumeBuilder:
                     if 'choices' in response_body:
                         body = response_body['choices'][0]['message']['content']
                         if not is_cover:
+                            print("processing resume: [" + jds["company"] + " - " + jds["title"] +"]" )
                             # get resume and suggestions from response
                             resume = body.split("Additional Suggestions")[0].strip()
                             suggestions = body.split("Additional Suggestions")[1].strip()
-                            resume = resume.replace("*  ","- ").replace("*   ","- ").replace("-  ","- ")
+                            if "```" in resume:
+                                start = resume.find("```")
+                                resume = resume[start:]
+                            while resume.endswith("#"):
+                                resume = resume[0:-1]
+                            resume = resume.replace("---","").strip()
                             return_listing.append({"resume":resume, "suggestions":suggestions, "company": jds["company"], "title":jds["title"]})
                         else:
                             # get cover letter from response
+                            print("processing cover letter: [" + jds["company"] + " - " + jds["title"] + "]")
                             return_listing.append({"cover":body, "company": jds["company"], "title":jds["title"]})
                 except Exception as ex:
                     print(str(ex))
@@ -115,14 +121,22 @@ class ResumeBuilder:
         for cl in cover_letters:
             x = cl["cover"].split("---")
             try:
-                with open(self.path + os.sep + cl["company"] + "-" + cl["title"] + "-" + self.current_date_time + ".txt", "w+t",
+                with open(self.path + os.sep + "cover-" + cl["company"] + "-" + cl["title"] + "-" + self.current_date_time + ".txt", "w+t",
                           encoding=self.encoding) as file:
                     print("writing - " + file.name)
                     file.write(x[0])
             except Exception as ex:
                 print(str(ex))
 
-    def export_resume(self,new_resume):
+    def export_resume(self):
+        resumes = self.process_prompt(is_cover=False)
+        for r in resumes:
+            print(r)
+            print("#" * 15)
+            print(r["resume"])
+            # print("@" * 15)
+            # print(r["suggestions"])
+
         """
         Convert a markdown resume to PDF format and save it.
 
@@ -133,7 +147,7 @@ class ResumeBuilder:
             str: A message indicating success or failure of the PDF export
         """
 
-        return new_resume
+        # return new_resume
         #
         # try:
         #     # save as PDF
@@ -150,5 +164,5 @@ class ResumeBuilder:
         #     return f"Failed to export resume: {str(e)} 💔"
 
 r = ResumeBuilder()
-r.make_cover_letters()
+r.export_resume()
 
