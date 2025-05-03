@@ -5,10 +5,10 @@ https://github.com/ShawhinT/AI-Builders-Bootcamp-2/tree/main/lightning-lesson
 
 ## Setup
 ### How to:
-1.Install [https://lmstudio.ai/](LM Studio) 0.3.15 (Build 11) or newer
+1. Install https://lmstudio.ai/ - LM Studio 0.3.15 (Build 11) or newer
 2. Within LM Studio download `gemma-3-4b-it-qat` or any other LLM GUFF model file
    - Different LLM file will produce different results
-3. Install [https://python.org/](Python) 3.12 or newer  
+3. Install https://python.org/ - Python 3.12 or newer  
 4. Update these values in main.py: 
 ```
     name = "Pete Letkeman"
