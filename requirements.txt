@@ -1,0 +1,9 @@
+certifi==2025.4.26
+charset-normalizer==3.4.1
+idna==3.10
+markdown-it-py==3.0.0
+markdown_pdf==1.7
+mdurl==0.1.2
+PyMuPDF==1.25.3
+requests==2.32.3
+urllib3==2.4.0
