@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import time
+from typing import Any
 
 from flask import request
 from flask_restx import Resource, fields, Namespace
@@ -61,6 +62,7 @@ class ProcessData(Resource):
     encoding = "utf-8"
     upload_path = "uploads"
 
+
     def post(self):
 
         args = process_parser.parse_args()
@@ -115,8 +117,25 @@ class ProcessData(Resource):
             return ""
         return ""
 
-# @resumes_api.route("/")
-# class Todo(Resource):
-#     @resumes_api.marshal_with(model, envelope="resource")
-#     def get(self, **kwargs):
-#         return model # Some function that queries the db
+@resumes_api.route("/get-results")
+class FileListing(Resource):
+    # list file logic
+    @staticmethod
+    def get(**kwargs: object) -> list[Any]:
+        files = []
+        main_path = ResumeBuilder.path + os.sep + ProcessData.upload_path
+        for x in os.listdir(main_path):
+            if os.path.isdir(main_path + os.sep + x):
+                for i in os.listdir(main_path + os.sep + x):
+                    files.append(i)
+        return  files # Some function that queries the db
+
+
+@resumes_api.route("/get_results/<string:file_name>")
+class FileListing(Resource):
+    # download file logic
+    @staticmethod
+    def get(file_name: str) -> str:
+        return file_name
+
+
