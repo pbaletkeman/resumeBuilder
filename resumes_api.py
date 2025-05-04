@@ -41,12 +41,14 @@ process_parser.add_argument("resume", location="files", type=FileStorage, requir
 process_parser.add_argument("jobDescription", location="files", type=FileStorage, required=False)
 process_parser.add_argument("body", location="form", default={"name": "pete letkeman", "address": "803-1100 King St. W.\nToronto Ontario\nCanada\nM6K 0C6\n519.331.1405\npete@letkeman", "email": "pete@letkeman.ca", "model": "gemma-3-4b-it-qat", "temperature":0.09, "sourceJobDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", "sourceResume":"Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.", "createCover": True, "createResume":True, "sourceJobTitle": "Software Developer", "sourceJobCompany": "Amazon"})
 
-def make_llm_request():
+def make_llm_request(resume_builder: ResumeBuilder, create_cover: bool = True, create_resume: bool = True):
     print("Thread started")
-    with open("sample.txt", "w+t", encoding="utf-8") as t:
-        for i in range(10):
-            t.write(str(i))
-            time.sleep(3)  # Simulate some work being done
+
+    if create_cover:
+            resume_builder.make_cover_letters()
+    if create_resume:
+            resume_builder.export_resume()
+
     print("Thread finished")
 
 
@@ -60,12 +62,6 @@ class ProcessData(Resource):
     upload_path = "uploads"
 
     def post(self):
-
-        # # Create a new thread that runs the function do_this()
-        # thread = threading.Thread(target=make_llm_request)
-        #
-        # # Start the thread
-        # thread.start()
 
         args = process_parser.parse_args()
         form_data = request.form.to_dict()
@@ -97,12 +93,12 @@ class ProcessData(Resource):
         resume_builder.resume = resume
         resume_builder.jobs = job_descriptions
 
-        if "createCover" in json_body:
-            if json_body["createCover"]:
-                resume_builder.make_cover_letters()
-        if "createResume" in json_body:
-            if json_body["createResume"]:
-                resume_builder.export_resume()
+        create_cover = json_body["createCover"] if "createCover" in json_body else False
+        create_resume = json_body["createResume"] if "createResume" in json_body else False
+
+        thread = threading.Thread(target=make_llm_request, args=(resume_builder, create_cover, create_resume))
+        # Start the thread
+        thread.start()
 
         return {"status":"processing"}, 201
 
