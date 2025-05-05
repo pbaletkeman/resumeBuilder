@@ -1,5 +1,9 @@
 ## AI Resume And Cover Letter Optimizer
 
+API Endpoints
+![image](https://github.com/user-attachments/assets/3c6e8365-8efd-4cc7-9999-70cbea0442a6)
+
+
 ### Inspiration/original: 
 https://github.com/ShawhinT/AI-Builders-Bootcamp-2/tree/main/lightning-lesson
 
