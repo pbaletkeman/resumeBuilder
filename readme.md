@@ -57,7 +57,7 @@ response = requests.post(self.endpoint, json=data)
     endpoint = "http://localhost:1234/api/v0/chat/completions" // default LM Studio endpoint
     temperature = 0.09 // valid values range from 0.0 to 2.0, the higher the number more the change of a hallucination 
 ```
-
+2. Results will be found in the `output` directory
 ## Run:
 - Place source `resume.md` in the `resume` directory
 - Place all job descriptions in `job-descriptions` directory
