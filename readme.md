@@ -1,6 +1,7 @@
 ## AI Resume And Cover Letter Optimizer
 
-API Endpoints
+### API Endpoints
+
 ![image](https://github.com/user-attachments/assets/3c6e8365-8efd-4cc7-9999-70cbea0442a6)
 
 
