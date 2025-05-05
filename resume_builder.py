@@ -4,7 +4,6 @@ import os
 import requests
 import datetime
 
-
 from markdown_pdf import MarkdownPdf, Section
 
 
@@ -92,7 +91,13 @@ class ResumeBuilder:
                 messages = [{"role": "system", "content": "Expert resume writer"}, {"role": "user", "content": prompt}]
                 data = {"model": self.model, "messages": messages, "temperature": self.temperature}
 
-                # Make API call
+                # Open AI Setup
+                # Setup API client
+                ## from openai import OpenAI
+                ## client = OpenAI(api_key=api_key)
+                ## response = client.chat.completions.create(data)
+
+                    # Make API call
                 response = requests.post(self.endpoint, json=data)
 
                 try:
@@ -167,8 +172,8 @@ class ResumeBuilder:
         css = "p {border: 2px solid white; } li {border: 2px solid white; margin: 2px}"
         pdf.add_section(Section(file_contents), user_css=css)
 
-        print("writing - " + file_name.replace(".md",".pdf"))
-        pdf.save(file_name.replace(".md",".pdf"))
+        print("writing - " + file_name.replace(".md",".pdf").replace(".txt",".pdf"))
+        pdf.save(file_name.replace(".md",".pdf").replace(".txt",".pdf"))
 
     def md_to_pdf(self, md_file:str):
         with open(md_file, "r", encoding=self.encoding) as file:

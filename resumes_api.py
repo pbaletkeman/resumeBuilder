@@ -1,10 +1,11 @@
 import json
 import os
 import threading
-import time
 from typing import Any
+import shutil
 
-from flask import request
+
+from flask import request, send_from_directory, send_file
 from flask_restx import Resource, fields, Namespace
 
 from werkzeug.datastructures import FileStorage
@@ -13,11 +14,8 @@ from werkzeug.utils import  secure_filename
 from resume_builder import ResumeBuilder
 
 ALLOWED_EXTENSIONS = ["txt", "md"]
-ALLOWED_MIME_TYPES = ["text/plain"] #['image/png', 'image/jpeg', 'application/pdf']
 
-
-resumes_api = Namespace("resumes", description="Resume")
-
+resumes_api = Namespace("Resumes", description="APIs used to create optimized resumes and optimized cover letter using a LLM, uploaded job description and uploaded resume.", )
 
 model = resumes_api.model("Model", {
     "name": fields.String,
@@ -34,14 +32,6 @@ model = resumes_api.model("Model", {
     # 'date_updated': fields.DateTime(dt_format='rfc822'),
 })
 
-
-
-process_parser = resumes_api.parser()
-
-process_parser.add_argument("resume", location="files", type=FileStorage, required=False)
-process_parser.add_argument("jobDescription", location="files", type=FileStorage, required=False)
-process_parser.add_argument("body", location="form", default={"name": "pete letkeman", "address": "803-1100 King St. W.\nToronto Ontario\nCanada\nM6K 0C6\n519.331.1405\npete@letkeman", "email": "pete@letkeman.ca", "model": "gemma-3-4b-it-qat", "temperature":0.09, "sourceJobDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.", "sourceResume":"Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.", "createCover": True, "createResume":True, "sourceJobTitle": "Software Developer", "sourceJobCompany": "Amazon"})
-
 def make_llm_request(resume_builder: ResumeBuilder, create_cover: bool = True, create_resume: bool = True):
     print("Thread started")
 
@@ -56,22 +46,52 @@ def make_llm_request(resume_builder: ResumeBuilder, create_cover: bool = True, c
 def allowed_file(filename) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@resumes_api.route("/process-data/")
-@resumes_api.expect(process_parser)
+def handle_file_upload(args, form_field: str, upload_path: str) -> str:
+    if form_field in args:
+        resume_file = args[form_field]  # This is FileStorage instance
+        if resume_file:
+            resume_filename = secure_filename(resume_file.filename)
+            if allowed_file(resume_filename):
+                if not os.path.exists(upload_path):
+                    os.makedirs(upload_path)
+                resume_file.save(upload_path + os.sep + resume_filename)
+                return upload_path + os.sep + resume_filename
+            print("bad file extension")
+            return ""
+        print("empty file")
+        return ""
+    print("incorrect form element")
+    return ""
+
+@resumes_api.route("/process-data/", doc={"description":"Main endpoint which creates a resume and/or cover letter from the supplied data."})
 class ProcessData(Resource):
+    process_parser = resumes_api.parser()
+
+    process_parser.add_argument("resume", location="files", type=FileStorage, required=False)
+    process_parser.add_argument("jobDescription", location="files", type=FileStorage, required=False)
+    process_parser.add_argument("body", location="form", default={"name": "pete letkeman",
+                                                                  "address": "803-1100 King St. W.\nToronto Ontario\nCanada\nM6K 0C6\n519.331.1405\npete@letkeman",
+                                                                  "email": "pete@letkeman.ca",
+                                                                  "model": "gemma-3-4b-it-qat", "temperature": 0.09,
+                                                                  "sourceJobDescription": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                                                                  "sourceResume": "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.",
+                                                                  "createCover": True, "createResume": True,
+                                                                  "sourceJobTitle": "Software Developer",
+                                                                  "sourceJobCompany": "Amazon"})
+
     encoding = "utf-8"
     upload_path = "uploads"
 
-
+    @resumes_api.expect(process_parser)
     def post(self):
 
-        args = process_parser.parse_args()
+        args = self.process_parser.parse_args()
         form_data = request.form.to_dict()
         json_body = json.loads(form_data["body"])
 
         job_descriptions = []
         resume = ""
-        job_description_file = self.handle_file_upload(args,"jobDescription")
+        job_description_file = handle_file_upload(args,"jobDescription", ProcessData.upload_path)
         if len(job_description_file) > 0:
             with open(job_description_file, "r", encoding=self.encoding) as content:
                 jd = ".".join(content.readlines())
@@ -81,7 +101,7 @@ class ProcessData(Resource):
         else:
             job_descriptions.append({"jd": json_body["sourceJobDescription"], "title": json_body["sourceJobTitle"], "company": json_body["sourceJobCompany"]})
 
-        resume_file = self.handle_file_upload(args,"resume")
+        resume_file = handle_file_upload(args,"resume", ProcessData.upload_path)
         if len(resume_file) > 0:
             with open(resume_file, "r+t", encoding=self.encoding) as content:
                 resume = "".join(content.readlines())
@@ -104,20 +124,9 @@ class ProcessData(Resource):
 
         return {"status":"processing"}, 201
 
-    @staticmethod
-    def handle_file_upload(args, form_field: str) -> str:
-        if form_field in args:
-            resume_file = args[form_field]  # This is FileStorage instance
-            resume_filename = secure_filename(resume_file.filename)
-            if allowed_file(resume_filename):
-                if not os.path.exists(ProcessData.upload_path):
-                    os.makedirs(ProcessData.upload_path)
-                resume_file.save(ProcessData.upload_path + os.sep + resume_filename)
-                return ProcessData.upload_path + os.sep + resume_filename
-            return ""
-        return ""
 
-@resumes_api.route("/get-results")
+
+@resumes_api.route("/get-results", doc={"description":"Get Results Directory File Listing"})
 class FileListing(Resource):
     # list file logic
     @staticmethod
@@ -127,15 +136,52 @@ class FileListing(Resource):
         for x in os.listdir(main_path):
             if os.path.isdir(main_path + os.sep + x):
                 for i in os.listdir(main_path + os.sep + x):
-                    files.append(i)
-        return  files # Some function that queries the db
+                    files.append(x + "#" + i)
+        return files
 
-
-@resumes_api.route("/get_results/<string:file_name>")
+@resumes_api.route("/clear-files/", doc={"description":"Clear Work & Uploaded Files"})
 class FileListing(Resource):
     # download file logic
     @staticmethod
-    def get(file_name: str) -> str:
-        return file_name
+    def delete() -> bool:
+        try:
+            shutil.rmtree(ResumeBuilder.path)
+            shutil.rmtree(ProcessData.upload_path)
+            return True
+        except Exception as ex:
+            print(ex)
+            return False
 
+@resumes_api.route("/get_results/<path:file_name>", doc={"description":"Download The Generated File"})
+class FileListing(Resource):
+    # download file logic
+    @staticmethod
+    def get(file_name: str):
+        return send_from_directory(ResumeBuilder.path + os.sep + ProcessData.upload_path,
+                                   file_name, as_attachment=True)
 
+@resumes_api.route("/file_converter/", doc={"description": "Convert Markdown To PDF "})
+class MarkdownToPDF(Resource):
+    md_2_pdf_parser = resumes_api.parser()
+
+    md_2_pdf_parser.add_argument("sourceFile", location="files", type=FileStorage, required=False)
+    md_2_pdf_parser.add_argument("body", location="form", default={"source": "file contents file contents", "fileName":"somefile.txt"})
+
+    @resumes_api.expect(md_2_pdf_parser)
+    def post(self) :
+        args = self.md_2_pdf_parser.parse_args()
+        form_data = request.form.to_dict()
+        json_body = json.loads(form_data["body"])
+
+        source_file = handle_file_upload(args,"sourceFile", ProcessData.upload_path)
+        contents = ""
+        if len(source_file) > 0:
+            with open(source_file, "r+t", encoding=ProcessData.encoding) as f:
+                contents = "".join(f.read())
+        else:
+            if "source" in json_body:
+                contents = json_body["source"]
+            if "fileName" in json_body:
+                source_file = json_body["fileName"]
+        ResumeBuilder.save_pdf(source_file, contents)
+        return send_file(source_file.replace(".txt",".pdf").replace(".md",".pdf"), as_attachment=True)

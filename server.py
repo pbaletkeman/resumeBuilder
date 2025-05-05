@@ -6,10 +6,10 @@ from resumes_api import  resumes_api
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 0.5 * 1024 * 1024  # 0.5 megabytes
 api = Api(
-    title='My Title',
+    title='Resume & Cover Letter Optimizer',
     version='1.0',
-    description='A description',
-    # All API metadatas
+    description='Sample set of Flask APIs which use a LLM ',
+
 )
 
 api.add_namespace(resumes_api)
